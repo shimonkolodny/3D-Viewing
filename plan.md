@@ -288,3 +288,21 @@ Consequences for the plan:
 - With one thread on one of two cores, DA-V2-S at 252×140 may land below 5 fps — plan for **MiDaS-small / smaller DA-V2-S input (e.g. 196×112) as the default on this machine** and let autotune decide. Fallback if both are too slow: depth every Nth frame + motion-compensated reuse (~2–3 fps real depth).
 - Prefer H.264 over VP9/AV1 in the extension on this device class (no hardware VP9 decode on HD 4400).
 - Treat 4 GB RAM machines as a stretch goal; this 8 GB machine is the floor for v1.
+
+---
+
+## 17. Status: v0.1.0 shipped (pre-release)
+
+Released via GitHub Actions: https://github.com/shimonkolodny/3D-Viewing/releases/tag/v0.1.0 (Windows app zip, Chrome extension zip, SHA256SUMS).
+
+**Verified:** app unit + WebSocket tests (real model); real-Chromium end-to-end test (extension ↔ app ↔ WebGL2 overlay); the packaged Windows exe round-trips a frame over the WebSocket in CI.
+**Not verified:** speed on the i3-4160T / HD 4400 reference machine; real-glasses visual quality; YouTube-specific layout/fullscreen behaviour.
+
+**Deviations from the plan above**
+- App is **Python + ONNX Runtime (PyInstaller)**, not Rust (the plan's allowed fallback) — chosen so it could be built and tested end to end. Memory ≈ 200 MB, at the target limit.
+- **FP32 model shipped**, not INT8: no speed gain on AVX2 and visibly lower accuracy.
+- **No pairing token**: the server accepts only `chrome-extension://` origins on 127.0.0.1 (web pages cannot connect).
+- Status **window** instead of a tray icon. Frames go extension → service worker as base64 (runtime messaging is JSON-only).
+- Not implemented yet: DRM screen-capture mode (Phase 5b), tabCapture fallback for cross-origin video, Chrome Web Store listing, code signing, auto-update.
+
+**Next:** measure on the i3-4160T, tune defaults from real numbers, then Web Store submission and signing.
