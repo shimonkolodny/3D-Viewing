@@ -266,7 +266,25 @@ You want these supported. The honest picture:
 - Phase 5 (public release) additions: code-signing certificate (SmartScreen reputation), installer with silent auto-update, Chrome Web Store privacy policy and data-use disclosures ("no data leaves the device"), opt-in crash reporting with no video content, Windows 10 / old-hardware support docs, licence audit (Depth Anything V2-S Apache-2.0, ONNX Runtime MIT) with bundled attributions.
 - Phase 6: Linux/macOS builds removed.
 
-## 15. Remaining open questions
-1. **DRM mode:** OK to ship experimental/off-by-default (or PC-app-only) pending legal review?
-2. **Test hardware:** do you have a real 2014 Intel machine for Phase 0? Its exact model would let us pin numbers; a throttled VM is a poor substitute for cache/AVX2 behaviour.
-3. **Pricing:** free, donation, or paid? (Affects app licence and whether licence-key code is needed.)
+## 15. Resolved questions
+1. **DRM mode:** yes — ship as experimental, off-by-default, pending legal review (Phase 5b).
+2. **Test hardware:** the user's own machine is the reference device (see §16).
+3. **Pricing:** **free.** Use a permissive open-source licence (MIT or Apache-2.0) for app and extension; no licence-key code; optional donation link only. Free + open source also eases Web Store review and SmartScreen trust. Note: a free product still needs a code-signing certificate to avoid SmartScreen warnings — look at free-for-OSS signing options (e.g. SignPath Foundation) before buying one.
+
+---
+
+## 16. Reference device (measured from the user's Task Manager screenshot)
+
+| Item | Value | Implication |
+|---|---|---|
+| CPU | Intel Core i3-4160T, Haswell refresh, 3.1 GHz, **2 cores / 4 threads**, 35 W, 3 MB L3 | AVX2/FMA yes; no AVX-512/VNNI. Only 2 physical cores: inference must use **1 thread** (2 at most, only when video is paused or decode is light) |
+| iGPU | Intel HD Graphics 4400 | Must run the WebGL2 anaglyph shader; not used for inference by default |
+| RAM | 7.9 GB total, **6.6 GB (84%) already in use** | Memory is tight: app working set target **≤ ~200 MB**, model loaded once, no frame backlog; consider memory-mapped ONNX weights |
+| OS | **Windows 10** | Confirms Windows 10 as a first-class target |
+| CPU load at capture | 82% with other apps running | Real-world headroom is small: inference must back off automatically (adaptive quality, §3.4) when the system is busy |
+
+Consequences for the plan:
+- **Phase 0 benchmark target = this exact machine.** Pass criteria: ≥5 depth fps (≈192–252 px input) on 1 inference thread while a 720p H.264 video plays without dropped video frames; app memory ≤ 200 MB; shader pass ≤ ~4 ms at 720p on HD 4400.
+- With one thread on one of two cores, DA-V2-S at 252×140 may land below 5 fps — plan for **MiDaS-small / smaller DA-V2-S input (e.g. 196×112) as the default on this machine** and let autotune decide. Fallback if both are too slow: depth every Nth frame + motion-compensated reuse (~2–3 fps real depth).
+- Prefer H.264 over VP9/AV1 in the extension on this device class (no hardware VP9 decode on HD 4400).
+- Treat 4 GB RAM machines as a stretch goal; this 8 GB machine is the floor for v1.
