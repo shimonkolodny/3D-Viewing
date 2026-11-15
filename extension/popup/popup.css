@@ -1,0 +1,23 @@
+:root { color-scheme: light dark; --bg:#fff; --fg:#1d2330; --muted:#667; --line:#d9dde6; --accent:#0aa5b8; }
+@media (prefers-color-scheme: dark) { :root { --bg:#1b1f29; --fg:#eceff6; --muted:#9aa3b5; --line:#343a48; } }
+* { box-sizing: border-box; }
+body { width: 330px; margin: 0; padding: 14px 16px 12px; background: var(--bg); color: var(--fg); font: 13px/1.4 system-ui, "Segoe UI", sans-serif; }
+header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+h1 { font-size:16px; margin:0; display:flex; align-items:center; gap:2px; }
+.dot { width:11px; height:11px; border-radius:3px; display:inline-block; }
+.dot.r { background:#e74c3c; } .dot.c { background:#00c8dc; margin-left:-4px; margin-right:6px; mix-blend-mode:normal; }
+.status { padding:8px 10px; border-radius:8px; margin-bottom:12px; font-size:12.5px; }
+.status.ok { background:#e6f6ec; color:#14532d; } .status.warn { background:#fdf1e0; color:#7a4a00; } .status.bad { background:#fde8e8; color:#8a1c1c; }
+@media (prefers-color-scheme: dark) { .status.ok { background:#123a24; color:#b7f0cc; } .status.warn { background:#3d2c0c; color:#f7d99a; } .status.bad { background:#431818; color:#f9c0c0; } }
+.row { display:grid; grid-template-columns: 112px 1fr 38px; align-items:center; gap:8px; margin:9px 0; }
+.row select { grid-column: 2 / 4; width:100%; padding:4px; background:var(--bg); color:var(--fg); border:1px solid var(--line); border-radius:6px; }
+.row.check { grid-template-columns: 18px 1fr; } .row.check label { color:var(--fg); }
+output { text-align:right; color:var(--muted); font-variant-numeric: tabular-nums; }
+input[type=range] { width:100%; accent-color: var(--accent); }
+footer { display:flex; justify-content:space-between; gap:8px; margin-top:12px; padding-top:9px; border-top:1px solid var(--line); color:var(--muted); font-size:11.5px; }
+a { color: var(--accent); }
+.switch { position:relative; width:44px; height:24px; } .switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; inset:0; background:#9aa3b5; border-radius:24px; transition:.15s; cursor:pointer; }
+.slider::before { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; background:#fff; border-radius:50%; transition:.15s; }
+input:checked + .slider { background: var(--accent); } input:checked + .slider::before { transform: translateX(20px); }
+input:focus-visible + .slider { outline:2px solid var(--accent); outline-offset:2px; }

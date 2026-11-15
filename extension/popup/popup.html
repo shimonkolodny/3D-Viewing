@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3D Viewing</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1><span class="dot r"></span><span class="dot c"></span> 3D Viewing</h1>
+    <label class="switch" title="Alt+Shift+3">
+      <input type="checkbox" id="enabled"><span class="slider"></span>
+    </label>
+  </header>
+
+  <div id="status" class="status warn">Checking the PC app…</div>
+
+  <div class="row"><label for="strength">3D depth</label><input type="range" id="strength" min="0.5" max="4" step="0.1"><output id="strengthOut"></output></div>
+  <div class="row"><label for="convergence">Pop-out ⇄ window</label><input type="range" id="convergence" min="0" max="1" step="0.05"><output id="convergenceOut"></output></div>
+  <div class="row"><label for="mode">Colour</label>
+    <select id="mode">
+      <option value="dubois">Red/cyan – best colour</option>
+      <option value="half">Red/cyan – half colour</option>
+      <option value="gray">Red/cyan – grey</option>
+    </select></div>
+  <div class="row"><label for="quality">Render quality</label>
+    <select id="quality">
+      <option value="low">Low (480p) – old PCs</option>
+      <option value="medium">Medium (720p)</option>
+      <option value="high">High (1080p)</option>
+      <option value="native">Native</option>
+    </select></div>
+  <div class="row check"><input type="checkbox" id="swapEyes"><label for="swapEyes">Swap eyes (if depth looks inside-out)</label></div>
+  <div class="row check"><input type="checkbox" id="preferH264"><label for="preferH264">Prefer H.264 video (smoother on older PCs; reload page)</label></div>
+
+  <footer>
+    <a href="https://github.com/shimonkolodny/3D-Viewing/releases/latest" target="_blank" rel="noreferrer">Get the PC app</a>
+    <span>Everything stays on your computer.</span>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>
