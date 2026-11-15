@@ -106,7 +106,7 @@ Tricks that make the Potato tier look smooth:
 ---
 
 ## 5. Anaglyph output options
-- Red/cyan (default), green/magenta, amber/blue (ColorCode).
+- **Red/cyan only** (confirmed). No other glasses types.
 - Color method: Dubois least-squares matrices (default; best color retention/least ghosting), plus Half-color and Gray variants. Selectable.
 - User controls: **depth strength** (max disparity as % of width), **convergence** (zero-parallax plane — what pops out vs. recedes), swap eyes, per-site on/off, hotkey toggle, "reduce ghosting" (depth-range compression).
 - Defaults conservative (≈1.5–2% of width max disparity) to avoid eye strain; clamp hard max.
@@ -217,9 +217,56 @@ Anaglyph = per-eye color matrices applied after warping (Dubois) in the same sha
 
 ---
 
-## 11. Open questions for you
-1. **Platforms:** Windows-only first, or Windows + Linux/macOS from the start?
-2. **Distribution:** personal/hobby use, or public Chrome Web Store + installer (affects signing, licences, privacy policy work)?
-3. **Oldest target machine:** a concrete CPU/GPU (e.g., "i5-4xxx, no dGPU") so the Potato tier has a real benchmark target.
-4. **Glasses:** red/cyan only, or also green/magenta and amber/blue?
-5. **Acceptable to skip DRM streaming sites** (Netflix etc.)? They cannot be supported by any approach in a browser.
+## 11. Decisions (confirmed)
+
+| Question | Decision | Consequence |
+|---|---|---|
+| Platform | **Windows only** (10/11, x64) | Drop Linux/macOS/CoreML work; CPU + DirectML are the runtimes that matter |
+| Distribution | **Public release** (Chrome Web Store + signed installer) | Licences, signing, privacy policy, store review, auto-update, support burden (see Phase 5) |
+| Oldest target | **2014-era Intel CPU + integrated GPU** (Haswell/Broadwell, e.g. i5-4xxx, HD 4400/4600/5500) | Defines the "Potato" tier — see §12 |
+| Glasses | **Red/cyan only** | One Dubois red/cyan matrix + Half-color/Gray fallbacks |
+| Skip DRM sites? | **No — they should be supported** | See §13: cannot be done by reading frames; best-effort screen-capture path with honest limits |
+
+---
+
+## 12. The 2014 Intel target — what it really means
+
+Facts that shape the design (all to be verified in Phase 0 on a real machine):
+
+- **Inference will run on the CPU.** Haswell/Broadwell iGPUs are too weak/old for useful ML: OpenVINO's GPU plugin needs Gen9+ (Skylake, 2015), and DirectML on HD 4400-class parts is likely slower than the CPU. Treat iGPU inference as "benchmark and see", CPU as the default.
+- **CPU features:** AVX2 + FMA yes; AVX-512 and VNNI **no**. INT8 gains are modest (ONNX Runtime u8s8 on AVX2 can saturate — use reduced-range/per-channel quantization and compare against FP32). Verify accuracy of the quantized model.
+- **Compute budget:** a 2–4 core ~2.5 GHz Haswell realistically sustains tens of GFLOPS. DA-V2-S at ~252×140 input (~180 tokens) is in the single-digit-GFLOP range, so **target ≈ 5–8 depth fps** — a hypothesis to measure. Depth interpolation/hold (§4) is therefore mandatory.
+- **Video decode competes for the same CPU.** Haswell has hardware H.264 decode but **no hardware VP9/AV1**. YouTube's default VP9 would be software-decoded and eat the cores the model needs. Mitigations: an extension option to prefer H.264 streams on this class of machine, and inference on 1–2 threads at below-normal priority so playback never stutters.
+- **The render side also runs on that iGPU.** WebGL2 on HD 4400-class must stay light: configurable render scale (e.g. 720p overlay upscaled by the compositor), ray-march steps knob (4/6/8), and a "simple shift" fallback shader. Budget: shader pass ≤ ~4 ms at 720p on the target iGPU.
+- **Windows 10** is the likeliest OS on this hardware: support it explicitly in installer and CI.
+- **Memory:** many of these machines have 4 GB RAM. Target app working set ≤ ~300 MB.
+
+**Potato tier (replaces the generic one in §4):** DA-V2-S INT8 *or* MiDaS-small, ~192–252 px wide input, 1–2 inference threads, ≥5 depth fps, interpolated to native video fps, app CPU ≤ ~35% on a 2-core part during playback. If DA-V2-S can't meet that, MiDaS-small becomes this tier's default. **Phase 0 exit criterion:** a real Haswell/Broadwell Intel machine holds ≥5 fps depth while playing 720p H.264 without dropping video frames.
+
+---
+
+## 13. DRM streaming sites (Netflix, Disney+, Prime Video…)
+
+You want these supported. The honest picture:
+
+- Widevine/PlayReady video is decrypted and decoded inside a protected pipeline. **`<video>` → canvas/WebGL readback, `tabCapture`, and extension APIs return black frames** for protected content, by design. Defeating that is DRM circumvention; we won't do it, and a Web Store extension that did would be removed.
+- **Best-effort path: capture screen/window pixels** (`getDisplayMedia`, or Windows Graphics Capture in the PC app) and run depth on those. On some setups (e.g. software Widevine L3, no hardware-protected overlay) screen capture isn't blocked; on others the OS/GPU driver blanks the protected region. Results vary by site, browser version, GPU and granted resolution tier.
+- Even when capture works, the extension **cannot draw 3D into the protected video**; it needs its own overlay (a topmost click-through window from the PC app, or a fullscreen overlay) over the player — window tracking, fullscreen handling, extra latency.
+- Everything is processed in memory frame-by-frame; **nothing is recorded, saved or transmitted**. State this in the privacy policy.
+- **Public-release risk:** streaming services' terms of service may restrict this, and Web Store review is stricter around DRM-adjacent features. That is a legal/business call. Recommendation: v1 ships with non-DRM sites fully supported; DRM mode ships as **experimental, off-by-default** (Phase 5b), with legal review before enabling it in the store build (it could be PC-app-only instead).
+- UX: when DRM is detected (EME in use / black frames), show "Protected video — try experimental screen-capture mode" instead of failing silently.
+
+---
+
+## 14. Plan changes from your answers
+- §3.4 / Phase 3: Windows-only; remove macOS/Linux/CoreML tracks.
+- §4 / §12: Potato tier = 2014 Intel CPU + iGPU, CPU-first, mandatory depth interpolation, H.264 preference, below-normal-priority inference.
+- §5: red/cyan only.
+- §13 / new **Phase 5b**: experimental screen-capture mode for DRM sites, gated on legal review.
+- Phase 5 (public release) additions: code-signing certificate (SmartScreen reputation), installer with silent auto-update, Chrome Web Store privacy policy and data-use disclosures ("no data leaves the device"), opt-in crash reporting with no video content, Windows 10 / old-hardware support docs, licence audit (Depth Anything V2-S Apache-2.0, ONNX Runtime MIT) with bundled attributions.
+- Phase 6: Linux/macOS builds removed.
+
+## 15. Remaining open questions
+1. **DRM mode:** OK to ship experimental/off-by-default (or PC-app-only) pending legal review?
+2. **Test hardware:** do you have a real 2014 Intel machine for Phase 0? Its exact model would let us pin numbers; a throttled VM is a poor substitute for cache/AVX2 behaviour.
+3. **Pricing:** free, donation, or paid? (Affects app licence and whether licence-key code is needed.)
